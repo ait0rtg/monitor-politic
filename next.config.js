@@ -1,6 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  serverExternalPackages: ['openai'],
+  experimental: {
+    serverComponentsExternalPackages: ['openai'],
+  },
 }
 
 module.exports = nextConfig
