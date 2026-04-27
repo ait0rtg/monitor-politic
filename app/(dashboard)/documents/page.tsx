@@ -7,7 +7,7 @@ export default async function DocumentsPage({
 }: {
   searchParams: Promise<{ [key: string]: string | undefined }>
 }) {
-  const supabase = createClient()
+  const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   const sp = await searchParams
 
