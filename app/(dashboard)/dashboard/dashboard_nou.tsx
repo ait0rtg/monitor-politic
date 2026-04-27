@@ -5,6 +5,8 @@ import UrgentsTable from '@/components/dashboard/UrgentsTable'
 import ActivityHeatmap from '@/components/charts/ActivityHeatmap'
 import ImportsChart from '@/components/charts/ImportsChart'
 import TemaDonut from '@/components/charts/TemaDonut'
+import MonitoratgeButton from '@/components/dashboard/MonitoratgeButton'
+import BandejaSafata from '@/components/dashboard/BandejaSafata'
 
 export default async function DashboardPage() {
   const supabase = await createClient()
@@ -15,45 +17,42 @@ export default async function DashboardPage() {
     { data: stats },
     { data: importsData },
     { data: temaData },
+    { data: noLlegits },
   ] = await Promise.all([
-    supabase.from('monitoratge')
-      .select('*')
-      .eq('classificacio', 'URGENT')
-      .eq('estat_seguiment', 'pendent')
-      .order('data_deteccio', { ascending: false })
-      .limit(10),
-    supabase.from('monitoratge')
-      .select('id, titol, venciment, classificacio, font, url_original')
-      .not('venciment', 'is', null)
-      .gte('venciment', new Date().toISOString().split('T')[0])
-      .order('venciment', { ascending: true })
-      .limit(20),
+    supabase.from('monitoratge').select('*').eq('classificacio', 'URGENT').eq('estat_seguiment', 'pendent').order('data_deteccio', { ascending: false }).limit(10),
+    supabase.from('monitoratge').select('id,titol,venciment,classificacio,font,url_original').not('venciment', 'is', null).gte('venciment', new Date().toISOString().split('T')[0]).order('venciment', { ascending: true }).limit(20),
     supabase.rpc('get_dashboard_stats'),
-    supabase.from('monitoratge')
-      .select('data_deteccio, import_detectat')
-      .not('import_detectat', 'is', null),
-    supabase.from('monitoratge')
-      .select('tema_principal')
-      .not('tema_principal', 'is', null),
+    supabase.from('monitoratge').select('data_deteccio,import_detectat').not('import_detectat', 'is', null),
+    supabase.from('monitoratge').select('tema_principal').not('tema_principal', 'is', null),
+    supabase.from('monitoratge').select('*').eq('estat', 'nou').order('data_deteccio', { ascending: false }).limit(20),
   ])
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-slate-800">Dashboard</h1>
-        <p className="text-sm text-slate-500 mt-0.5">Castell-Platja d'Aro</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-800">Dashboard</h1>
+          <p className="text-sm text-slate-500 mt-0.5">Castell-Platja d'Aro</p>
+        </div>
+        <MonitoratgeButton />
       </div>
+
       <StatsCards stats={stats} />
+
+      <BandejaSafata documents={noLlegits || []} />
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <VencimentsCalendar venciments={venciments || []} />
         <UrgentsTable urgents={urgents || []} />
       </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">
           <ImportsChart data={importsData || []} />
         </div>
         <TemaDonut data={temaData || []} />
       </div>
+
       <ActivityHeatmap />
     </div>
   )
