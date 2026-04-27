@@ -1,10 +1,10 @@
 -- Monitor Politic Municipal - Castell-Platja d'Aro
--- Versio final corregida - sense errors
+-- Versio final v4 - sense cap error
 
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE EXTENSION IF NOT EXISTS "pg_trgm";
 
--- Taula usuaris
+-- ── Taula usuaris ─────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS usuaris (
   id          UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   email       TEXT UNIQUE NOT NULL,
@@ -25,7 +25,7 @@ CREATE POLICY "Admin veu tots els usuaris" ON usuaris
     EXISTS (SELECT 1 FROM usuaris u WHERE u.id = auth.uid() AND u.role = 'admin')
   );
 
--- Taula monitoratge
+-- ── Taula monitoratge ─────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS monitoratge (
   id                       UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   url_original             TEXT UNIQUE NOT NULL,
@@ -46,9 +46,9 @@ CREATE TABLE IF NOT EXISTS monitoratge (
   pregunta_ple_suggerida   TEXT,
   requereix_revisio_manual BOOLEAN DEFAULT FALSE,
   estat_seguiment          TEXT DEFAULT 'pendent' CHECK (estat_seguiment IN ('pendent','en_curs','tancat')),
-  recordatori_30d          DATE GENERATED ALWAYS AS (data_deteccio::DATE + INTERVAL '30 days') STORED,
-  recordatori_90d          DATE GENERATED ALWAYS AS (data_deteccio::DATE + INTERVAL '90 days') STORED,
-  recordatori_180d         DATE GENERATED ALWAYS AS (data_deteccio::DATE + INTERVAL '180 days') STORED,
+  recordatori_30d          DATE,
+  recordatori_90d          DATE,
+  recordatori_180d         DATE,
   observacions             TEXT,
   estat                    TEXT DEFAULT 'nou' CHECK (estat IN ('nou','revisat','arxivat'))
 );
@@ -58,25 +58,39 @@ CREATE INDEX IF NOT EXISTS idx_mon_classif ON monitoratge(classificacio);
 CREATE INDEX IF NOT EXISTS idx_mon_data    ON monitoratge(data_deteccio DESC);
 CREATE INDEX IF NOT EXISTS idx_mon_venc    ON monitoratge(venciment) WHERE venciment IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_mon_tema    ON monitoratge(tema_principal);
-CREATE INDEX IF NOT EXISTS idx_mon_import  ON monitoratge(import_detectat) WHERE import_detectat IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_mon_estat   ON monitoratge(estat_seguiment);
 
 ALTER TABLE monitoratge ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Usuaris autenticats llegeixen monitoratge" ON monitoratge
+CREATE POLICY "Usuaris llegeixen monitoratge" ON monitoratge
   FOR SELECT USING (auth.role() = 'authenticated');
 
-CREATE POLICY "Usuaris editen observacions monitoratge" ON monitoratge
+CREATE POLICY "Usuaris editen observacions" ON monitoratge
   FOR UPDATE USING (auth.role() = 'authenticated')
   WITH CHECK (TRUE);
 
-CREATE POLICY "Admin i service editen monitoratge" ON monitoratge
+CREATE POLICY "Admin i service escriuen monitoratge" ON monitoratge
   FOR ALL USING (
     auth.role() = 'service_role' OR
     EXISTS (SELECT 1 FROM usuaris u WHERE u.id = auth.uid() AND u.role = 'admin')
   );
 
--- Taula expedients BPM
+-- Funcio per calcular recordatoris al inserir
+CREATE OR REPLACE FUNCTION calcular_recordatoris_monitoratge()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.recordatori_30d  := NEW.data_deteccio::DATE + INTERVAL '30 days';
+  NEW.recordatori_90d  := NEW.data_deteccio::DATE + INTERVAL '90 days';
+  NEW.recordatori_180d := NEW.data_deteccio::DATE + INTERVAL '180 days';
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trigger_recordatoris_monitoratge
+  BEFORE INSERT ON monitoratge
+  FOR EACH ROW EXECUTE FUNCTION calcular_recordatoris_monitoratge();
+
+-- ── Taula expedients BPM ──────────────────────────────────────
 CREATE TABLE IF NOT EXISTS expedients_bpm (
   id              UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   numero          TEXT UNIQUE NOT NULL,
@@ -99,9 +113,9 @@ CREATE TABLE IF NOT EXISTS expedients_bpm (
   resum_ia        TEXT,
   classificacio   TEXT CHECK (classificacio IN ('URGENT','IMPORTANT','INFORMATIU')),
   estat_seguiment TEXT DEFAULT 'pendent' CHECK (estat_seguiment IN ('pendent','en_curs','tancat')),
-  recordatori_30d  DATE GENERATED ALWAYS AS (data + INTERVAL '30 days') STORED,
-  recordatori_90d  DATE GENERATED ALWAYS AS (data + INTERVAL '90 days') STORED,
-  recordatori_180d DATE GENERATED ALWAYS AS (data + INTERVAL '180 days') STORED,
+  recordatori_30d  DATE,
+  recordatori_90d  DATE,
+  recordatori_180d DATE,
   observacions    TEXT,
   data_deteccio   TIMESTAMPTZ DEFAULT NOW()
 );
@@ -125,7 +139,24 @@ CREATE POLICY "Admin i service escriuen BPM" ON expedients_bpm
     EXISTS (SELECT 1 FROM usuaris u WHERE u.id = auth.uid() AND u.role = 'admin')
   );
 
--- Taula compromisos
+-- Funcio per calcular recordatoris BPM
+CREATE OR REPLACE FUNCTION calcular_recordatoris_bpm()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF NEW.data IS NOT NULL THEN
+    NEW.recordatori_30d  := NEW.data + INTERVAL '30 days';
+    NEW.recordatori_90d  := NEW.data + INTERVAL '90 days';
+    NEW.recordatori_180d := NEW.data + INTERVAL '180 days';
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trigger_recordatoris_bpm
+  BEFORE INSERT ON expedients_bpm
+  FOR EACH ROW EXECUTE FUNCTION calcular_recordatoris_bpm();
+
+-- ── Taula compromisos ─────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS compromisos (
   id                   UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   titol                TEXT NOT NULL,
@@ -172,7 +203,7 @@ CREATE POLICY "Admin gestiona comentaris" ON comentaris_compromisos
     EXISTS (SELECT 1 FROM usuaris u WHERE u.id = auth.uid() AND u.role = 'admin')
   );
 
--- Funcio stats dashboard
+-- ── Funcio stats dashboard ────────────────────────────────────
 CREATE OR REPLACE FUNCTION get_dashboard_stats()
 RETURNS JSON AS $$
 DECLARE
@@ -189,7 +220,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- Trigger admin automatic
+-- ── Trigger admin automatic ───────────────────────────────────
 CREATE OR REPLACE FUNCTION set_admin_role()
 RETURNS TRIGGER AS $$
 BEGIN
