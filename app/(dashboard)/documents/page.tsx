@@ -5,12 +5,13 @@ import DocumentsFilters from '@/components/documents/DocumentsFilters'
 export default async function DocumentsPage({
   searchParams,
 }: {
-  searchParams: { [key: string]: string | undefined }
+  searchParams: Promise<{ [key: string]: string | undefined }>
 }) {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
+  const sp = await searchParams
 
-  const page = parseInt(searchParams.page || '1')
+  const page = parseInt(sp.page || '1')
   const limit = 25
   const offset = (page - 1) * limit
 
@@ -20,13 +21,11 @@ export default async function DocumentsPage({
     .order('data_deteccio', { ascending: false })
     .range(offset, offset + limit - 1)
 
-  if (searchParams.classificacio) query = query.eq('classificacio', searchParams.classificacio)
-  if (searchParams.font) query = query.eq('font', searchParams.font)
-  if (searchParams.tema) query = query.eq('tema_principal', searchParams.tema)
-  if (searchParams.estat) query = query.eq('estat_seguiment', searchParams.estat)
-  if (searchParams.search) {
-    query = query.or(`titol.ilike.%${searchParams.search}%,resum.ilike.%${searchParams.search}%`)
-  }
+  if (sp.classificacio) query = query.eq('classificacio', sp.classificacio)
+  if (sp.font) query = query.eq('font', sp.font)
+  if (sp.tema) query = query.eq('tema_principal', sp.tema)
+  if (sp.estat) query = query.eq('estat_seguiment', sp.estat)
+  if (sp.search) query = query.or(`titol.ilike.%${sp.search}%,resum.ilike.%${sp.search}%`)
 
   const { data: documents, count } = await query
 
@@ -37,11 +36,10 @@ export default async function DocumentsPage({
           <h1 className="text-2xl font-bold text-slate-800">Documents</h1>
           <p className="text-sm text-slate-500">{count || 0} documents trobats</p>
         </div>
-        <a href="/api/documents/export" className="text-sm text-blue-600 hover:underline flex items-center gap-1">
+        <a href="/api/documents/export" className="text-sm text-blue-600 hover:underline">
           Exportar CSV
         </a>
       </div>
-
       <DocumentsFilters />
       <DocumentsTable documents={documents || []} total={count || 0} page={page} limit={limit} userEmail={user?.email} />
     </div>
