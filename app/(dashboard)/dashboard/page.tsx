@@ -7,7 +7,7 @@ import ImportsChart from '@/components/charts/ImportsChart'
 import TemaDonut from '@/components/charts/TemaDonut'
 
 export default async function DashboardPage() {
-  const supabase = createClient()
+  const supabase = await createClient()
 
   const [
     { data: urgents },
