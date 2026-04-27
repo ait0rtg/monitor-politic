@@ -3,8 +3,6 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
-import { toast } from 'sonner'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -12,17 +10,27 @@ export default function LoginPage() {
   const [password, setPassword] = useState('')
   const [remember, setRemember] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault()
     setLoading(true)
-    const supabase = createClient()
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
-    if (error) {
-      toast.error('Credencials incorrectes. Torna-ho a intentar.')
+    setError('')
+
+    const res = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    })
+
+    const data = await res.json()
+
+    if (!res.ok) {
+      setError(data.error || 'Credencials incorrectes.')
       setLoading(false)
       return
     }
+
     router.push('/dashboard')
     router.refresh()
   }
@@ -30,6 +38,11 @@ export default function LoginPage() {
   return (
     <div className="bg-white rounded-2xl shadow-lg p-8">
       <h2 className="text-xl font-semibold text-slate-800 mb-6">Inicia sessió</h2>
+      {error && (
+        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+          {error}
+        </div>
+      )}
       <form onSubmit={handleLogin} className="space-y-4">
         <div>
           <label className="block text-sm font-medium text-slate-700 mb-1">Email</label>
@@ -49,9 +62,6 @@ export default function LoginPage() {
               className="w-4 h-4 rounded border-slate-300 text-blue-600" />
             <span className="text-sm text-slate-600">Recorda'm</span>
           </label>
-          <Link href="/reset-password" className="text-sm text-blue-600 hover:underline">
-            Has oblidat la contrasenya?
-          </Link>
         </div>
         <button type="submit" disabled={loading}
           className="w-full py-2.5 px-4 bg-blue-700 hover:bg-blue-800 text-white font-semibold rounded-lg text-sm transition-colors disabled:opacity-60">
