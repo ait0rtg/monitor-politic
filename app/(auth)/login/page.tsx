@@ -15,9 +15,16 @@ export default function LoginPage() {
     setError('')
 
     try {
-      const { createClient } = await import('@/lib/supabase/client')
-      const supabase = createClient()
-      const { error: authError } = await supabase.auth.signInWithPassword({ email, password })
+      const { createBrowserClient } = await import('@supabase/ssr')
+      const supabase = createBrowserClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+      )
+
+      const { error: authError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      })
 
       if (authError) {
         setError('Email o contrasenya incorrectes.')
@@ -25,16 +32,20 @@ export default function LoginPage() {
         return
       }
 
-      window.location.href = 'https://monitor-politic.vercel.app/dashboard'
-    } catch (err) {
-      setError('Error de connexió. Torna-ho a intentar.')
+      // Esperem que la sessio es guardi i redirigim
+      setTimeout(() => {
+        window.location.href = '/dashboard'
+      }, 500)
+
+    } catch {
+      setError('Error de connexio. Torna-ho a intentar.')
       setLoading(false)
     }
   }
 
   return (
     <div className="bg-white rounded-2xl shadow-lg p-8">
-      <h2 className="text-xl font-semibold text-slate-800 mb-6">Inicia sessió</h2>
+      <h2 className="text-xl font-semibold text-slate-800 mb-6">Inicia sessio</h2>
       {error && (
         <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
           {error}
@@ -43,38 +54,24 @@ export default function LoginPage() {
       <form onSubmit={handleLogin} className="space-y-4">
         <div>
           <label className="block text-sm font-medium text-slate-700 mb-1">Email</label>
-          <input
-            type="email"
-            value={email}
-            onChange={e => setEmail(e.target.value)}
-            required
+          <input type="email" value={email} onChange={e => setEmail(e.target.value)} required
             className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="el-teu@email.com"
-          />
+            placeholder="el-teu@email.com" />
         </div>
         <div>
           <label className="block text-sm font-medium text-slate-700 mb-1">Contrasenya</label>
-          <input
-            type="password"
-            value={password}
-            onChange={e => setPassword(e.target.value)}
-            required
+          <input type="password" value={password} onChange={e => setPassword(e.target.value)} required
             className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="••••••••"
-          />
+            placeholder="••••••••" />
         </div>
-        <button
-          type="submit"
-          disabled={loading}
+        <button type="submit" disabled={loading}
           className="w-full py-2.5 px-4 bg-blue-700 hover:bg-blue-800 text-white font-semibold rounded-lg text-sm transition-colors disabled:opacity-60">
-          {loading ? 'Entrant...' : 'Inicia sessió'}
+          {loading ? 'Entrant...' : 'Inicia sessio'}
         </button>
       </form>
       <p className="text-center text-sm text-slate-500 mt-4">
         No tens compte?{' '}
-        <Link href="/register" className="text-blue-600 hover:underline font-medium">
-          Registra't
-        </Link>
+        <Link href="/register" className="text-blue-600 hover:underline font-medium">Registra't</Link>
       </p>
     </div>
   )
