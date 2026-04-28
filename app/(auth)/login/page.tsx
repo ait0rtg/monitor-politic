@@ -25,7 +25,7 @@ export default function LoginPage() {
         return
       }
 
-      window.location.href = '/dashboard'
+      window.location.href = 'https://monitor-politic.vercel.app/dashboard'
     } catch (err) {
       setError('Error de connexió. Torna-ho a intentar.')
       setLoading(false)
