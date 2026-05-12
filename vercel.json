@@ -1,0 +1,16 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/vigilancia",
+      "schedule": "0 7 * * 1-5"
+    },
+    {
+      "path": "/api/cron/recordatoris",
+      "schedule": "0 8 * * 1-5"
+    },
+    {
+      "path": "/api/pdf",
+      "schedule": "30 7 * * 1-5"
+    }
+  ]
+}
