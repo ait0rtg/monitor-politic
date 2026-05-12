@@ -3,8 +3,8 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
-  LayoutDashboard, FileText, Zap, Target, BarChart3,
-  LogOut, Shield, Settings, MessageSquare, Calendar,
+  LayoutDashboard, FileText, Target, BarChart3,
+  LogOut, Shield, MessageSquare, Calendar,
   Brain, FileEdit, Menu, X, Smartphone, CalendarDays
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
@@ -16,13 +16,12 @@ const NAV = [
   { href: '/documents', label: 'Documents', icon: FileText },
   { href: '/agenda', label: 'Agenda de Plens', icon: CalendarDays },
   { href: '/calendari', label: 'Calendari', icon: Calendar },
-  { href: '/assistent', label: 'Assistent', icon: Zap, highlight: true },
+  { href: '/assessor', label: 'Assessor IA', icon: MessageSquare, highlight: true },
   { href: '/memoria', label: 'Memòria Política', icon: Brain },
   { href: '/alegacions', label: 'Al·legacions', icon: FileEdit },
-  { href: '/assessor', label: 'Assessor IA', icon: MessageSquare },
   { href: '/compromisos', label: 'Compromisos', icon: Target },
   { href: '/analisi', label: 'Anàlisi', icon: BarChart3 },
-  { href: '/preguntes-ple', label: 'Preguntes pel Ple', icon: MessageSquare },
+  { href: '/preguntes-ple', label: 'Preguntes pel Ple', icon: FileText },
   { href: '/ple', label: 'Mode Ple 📱', icon: Smartphone },
 ]
 
@@ -31,15 +30,12 @@ function NavLink({ href, label, icon: Icon, highlight, pathname }: {
 }) {
   const active = pathname === href || (href !== '/dashboard' && pathname.startsWith(href))
   return (
-    <Link href={href}
-      className={cn(
-        'flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-all',
-        active
-          ? 'bg-blue-50 text-blue-700'
-          : highlight
-            ? 'text-blue-600 hover:bg-blue-50'
-            : 'text-slate-600 hover:bg-slate-50 hover:text-slate-800'
-      )}>
+    <Link href={href} className={cn(
+      'flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-all',
+      active ? 'bg-blue-50 text-blue-700'
+        : highlight ? 'text-blue-600 hover:bg-blue-50'
+        : 'text-slate-600 hover:bg-slate-50 hover:text-slate-800'
+    )}>
       <Icon className="w-4 h-4 flex-shrink-0" />
       <span className="flex-1">{label}</span>
       {highlight && !active && <span className="w-1.5 h-1.5 bg-blue-500 rounded-full" />}
@@ -75,13 +71,11 @@ export default function Sidebar({ userEmail, userName }: { userEmail: string; us
         {admin && (
           <>
             <div className="border-t border-slate-100 my-2" />
-            <Link href="/admin" className={cn('flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
-              pathname === '/admin' ? 'bg-slate-100 text-slate-800' : 'text-slate-500 hover:bg-slate-50')}>
+            <Link href="/admin" className={cn(
+              'flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
+              pathname.startsWith('/admin') ? 'bg-slate-100 text-slate-800' : 'text-slate-500 hover:bg-slate-50'
+            )}>
               <Shield className="w-4 h-4" /> Administració
-            </Link>
-            <Link href="/admin/usuaris" className={cn('flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
-              pathname.startsWith('/admin/usuaris') ? 'bg-slate-100 text-slate-800' : 'text-slate-500 hover:bg-slate-50')}>
-              <Settings className="w-4 h-4" /> Usuaris
             </Link>
           </>
         )}
